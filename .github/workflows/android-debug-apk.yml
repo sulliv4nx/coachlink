@@ -41,12 +41,12 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - name: Installer Android SDK
-        uses: android-actions/setup-android@v3
-
+      # Le runner ubuntu-latest dispose deja du SDK Android et de sdkmanager.
+      # setup-android@v3 essayait d'installer le paquet obsolete "tools".
       - name: Installer Android API 36
         shell: bash
         run: |
+          echo "ANDROID_HOME=$ANDROID_HOME"
           sdkmanager --install 'platforms;android-36' 'build-tools;36.0.0'
 
       # L'archive V0.4 a gradle-wrapper.properties, mais pas gradle-wrapper.jar.
