@@ -1,0 +1,83 @@
+name: CoachLink V0.4 - APK Android de test
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: coachlink-apk-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-debug-apk:
+    name: Compiler et tester CoachLink
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+
+    steps:
+      - name: Recuperer les sources
+        uses: actions/checkout@v4
+
+      - name: Verifier la structure du projet
+        shell: bash
+        run: |
+          test -f settings.gradle.kts || {
+            echo '::error::Le fichier settings.gradle.kts doit se trouver a la racine du depot.'
+            exit 1
+          }
+          test -f app/build.gradle.kts || {
+            echo '::error::Le module app/ doit etre a la racine du depot.'
+            exit 1
+          }
+
+      - name: Installer Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Installer Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Installer Android API 36
+        shell: bash
+        run: |
+          sdkmanager --install 'platforms;android-36' 'build-tools;36.0.0'
+
+      # L'archive V0.4 a gradle-wrapper.properties, mais pas gradle-wrapper.jar.
+      # On installe donc directement Gradle 8.13 au lieu d'appeler ./gradlew.
+      - name: Installer Gradle 8.13
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.13'
+
+      - name: Lancer les tests et construire l'APK debug
+        shell: bash
+        run: gradle --no-daemon --stacktrace :app:testDebugUnitTest :app:assembleDebug
+
+      - name: Verifier l'APK cree
+        shell: bash
+        run: |
+          test -s app/build/outputs/apk/debug/app-debug.apk
+          sha256sum app/build/outputs/apk/debug/app-debug.apk
+          {
+            echo '### CoachLink V0.4 - APK debug'
+            echo 'Tests Android et compilation executes avec succes.'
+            echo 'Ouvrir les artefacts de cette execution pour telecharger **CoachLink-V04-APK-debug**.'
+            echo 'Extraire ensuite le ZIP pour recuperer **app-debug.apk**.'
+            echo ''
+            echo "Note : l’analyse photo IA nécessite toujours un serveur HTTPS configuré et protégé."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Publier l'APK a telecharger
+        uses: actions/upload-artifact@v4
+        with:
+          name: CoachLink-V04-APK-debug
+          path: app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 14
