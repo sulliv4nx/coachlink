@@ -86,6 +86,7 @@ class CoachViewModel(app: Application): AndroidViewModel(app) {
     val settings = repo.settings
     val extraWorkouts = repo.extraWorkouts
     val mealPlan = repo.mealPlan
+    val crossfitSessions = repo.crossfitSessions
     private val _food = MutableStateFlow<FoodLookup?>(null)
     val food = _food.asStateFlow()
     private val _loading = MutableStateFlow(false)
@@ -176,6 +177,24 @@ class CoachViewModel(app: Application): AndroidViewModel(app) {
         }
         return true
     }
+    fun saveCrossfit(day: String, title: String, format: String, wod: String,
+                     minutes: Int, rpe: Int, muscles: Set<Muscle>, pain: Boolean): Boolean {
+        if (title.trim().length !in 2..100 || wod.trim().length !in 3..3000 ||
+            minutes !in 1..240 || rpe !in 1..10 || muscles.isEmpty() ||
+            muscles.size > 7 || runCatching { LocalDate.parse(day) }.isFailure ||
+            LocalDate.parse(day) > LocalDate.now()) {
+            inform("Vérifiez la date, le WOD, la durée, l'effort et les muscles sollicités")
+            return false
+        }
+        perform("Cours CrossFit enregistré : le coach prend ce WOD en compte") {
+            repo.addCrossfitSession(CrossFitSession(day = day, title = title.trim(),
+                format = format, wod = wod.trim(), durationMinutes = minutes,
+                rpe = rpe, muscleGroups = muscles.joinToString(",") { it.name }, pain = pain))
+        }
+        return true
+    }
+    fun deleteCrossfit(id: Long) = perform("Cours CrossFit retiré") { repo.deleteCrossfitSession(id) }
+
     fun removeExtra(id: Long) = perform("Activité supprimée") { repo.deleteExtraWorkout(id) }
     fun acceptProposal(proposal: SessionProposal): Boolean {
         if (proposal.exercises.isEmpty() || proposal.exercises.size > 10) { inform("Séance non applicable"); return false }

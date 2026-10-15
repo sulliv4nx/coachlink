@@ -106,6 +106,23 @@ data class ExtraWorkout(
     val createdAt: Long = System.currentTimeMillis()
 )
 
+
+/** One CrossFit class may train several areas: athletes verify muscle groups before saving. */
+@Entity(tableName = "crossfit_sessions", indices = [Index("athleteId"), Index("day")])
+data class CrossFitSession(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val athleteId: Long = 1,
+    val day: String,
+    val title: String,
+    val format: String,
+    val wod: String,
+    val durationMinutes: Int,
+    val rpe: Int,
+    val muscleGroups: String,
+    val pain: Boolean = false,
+    val createdAt: Long = System.currentTimeMillis()
+)
+
 /** Weekly recurring ingredient plan, independent from what has already been eaten. */
 @Entity(tableName = "meal_plan", indices = [Index("athleteId")])
 data class MealPlanIngredient(
@@ -155,6 +172,12 @@ interface CoachDao {
     @Query("DELETE FROM extra_workouts WHERE athleteId = 1 AND id = :id")
     suspend fun deleteExtraWorkout(id: Long)
 
+    @Query("SELECT * FROM crossfit_sessions WHERE athleteId = 1 ORDER BY day DESC, createdAt DESC")
+    fun crossfitSessions(): Flow<List<CrossFitSession>>
+    @Insert suspend fun addCrossfitSession(session: CrossFitSession)
+    @Query("DELETE FROM crossfit_sessions WHERE id = :id AND athleteId = 1")
+    suspend fun deleteCrossfitSession(id: Long)
+
     @Query("SELECT * FROM meal_plan WHERE athleteId = 1 ORDER BY weekday, mealType, id")
     fun mealPlan(): Flow<List<MealPlanIngredient>>
     @Insert suspend fun addMealPlanIngredient(item: MealPlanIngredient)
@@ -178,7 +201,7 @@ interface CoachDao {
 
 }
 
-@Database(entities = [Goal::class, Meal::class, Program::class, Exercise::class, WorkoutLog::class, BodyMetric::class, AthleteSettings::class, ExtraWorkout::class, MealPlanIngredient::class], version = 3, exportSchema = false)
+@Database(entities = [Goal::class, Meal::class, Program::class, Exercise::class, WorkoutLog::class, BodyMetric::class, AthleteSettings::class, ExtraWorkout::class, MealPlanIngredient::class, CrossFitSession::class], version = 4, exportSchema = false)
 abstract class CoachDatabase: RoomDatabase() {
     abstract fun dao(): CoachDao
     companion object {
@@ -208,10 +231,23 @@ abstract class CoachDatabase: RoomDatabase() {
                 db.execSQL("CREATE INDEX IF NOT EXISTS index_meal_plan_athleteId ON meal_plan (athleteId)")
             }
         }
+        private val MIGRATION_3_4 = object: Migration(3, 4) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("""CREATE TABLE IF NOT EXISTS crossfit_sessions (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                    athleteId INTEGER NOT NULL, day TEXT NOT NULL,
+                    title TEXT NOT NULL, format TEXT NOT NULL, wod TEXT NOT NULL,
+                    durationMinutes INTEGER NOT NULL, rpe INTEGER NOT NULL,
+                    muscleGroups TEXT NOT NULL, pain INTEGER NOT NULL,
+                    createdAt INTEGER NOT NULL)""")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_crossfit_sessions_athleteId ON crossfit_sessions (athleteId)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_crossfit_sessions_day ON crossfit_sessions (day)")
+            }
+        }
         @Volatile private var INSTANCE: CoachDatabase? = null
         fun get(context: Context): CoachDatabase = INSTANCE ?: synchronized(this) {
             INSTANCE ?: Room.databaseBuilder(context.applicationContext, CoachDatabase::class.java, "coachlink-local.db")
-                .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
                 .build().also { INSTANCE = it }
         }
     }

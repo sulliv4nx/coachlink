@@ -13,6 +13,7 @@ class CoachRepository(private val dao: CoachDao) {
     val settings: Flow<AthleteSettings?> = dao.settings()
     val extraWorkouts: Flow<List<ExtraWorkout>> = dao.extraWorkouts()
     val mealPlan: Flow<List<MealPlanIngredient>> = dao.mealPlan()
+    val crossfitSessions: Flow<List<CrossFitSession>> = dao.crossfitSessions()
 
     suspend fun saveGoal(target: MacroTarget) = dao.saveGoal(Goal(calories = target.calories, protein = target.protein, carbs = target.carbs, fat = target.fat))
     suspend fun addMeal(meal: Meal) = dao.addMeal(meal)
@@ -29,6 +30,8 @@ class CoachRepository(private val dao: CoachDao) {
     suspend fun addPlanIngredient(item: MealPlanIngredient) = dao.addMealPlanIngredient(item)
     suspend fun deletePlanIngredient(id: Long) = dao.deleteMealPlanIngredient(id)
     suspend fun replaceMealPlan(items: List<MealPlanIngredient>) = dao.replaceMealPlan(items)
+    suspend fun addCrossfitSession(item: CrossFitSession) = dao.addCrossfitSession(item)
+    suspend fun deleteCrossfitSession(id: Long) = dao.deleteCrossfitSession(id)
     suspend fun createSuggestedSession(session: com.coachlink.app.domain.SessionProposal) =
         dao.createSuggestedProgram(
             Program(title = session.title + " • suggestion validée", dayLabel = "Adapté"),
