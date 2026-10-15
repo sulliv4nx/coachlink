@@ -26,7 +26,7 @@ private fun numberOrNull(value: String) = value.replace(',', '.').toDoubleOrNull
 @Composable
 fun AdaptiveCoachScreen(vm: CoachViewModel, athleteSettings: AthleteSettings, nutrition: Goal, meals: List<Meal>,
                         logs: List<WorkoutLog>, exercises: List<Exercise>, extra: List<ExtraWorkout>,
-                        metrics: List<BodyMetric>, isHumanCoach: Boolean) {
+                        crossfit: List<CrossFitSession>, metrics: List<BodyMetric>, isHumanCoach: Boolean) {
     val currentObjective = objective(athleteSettings.objective)
     var sport by remember(athleteSettings) { mutableStateOf(mode(athleteSettings.sportMode)) }
     var food by remember(athleteSettings) { mutableStateOf(mode(athleteSettings.nutritionMode)) }
@@ -45,17 +45,23 @@ fun AdaptiveCoachScreen(vm: CoachViewModel, athleteSettings: AthleteSettings, nu
         recentMeals.map { DailyNutrition(it.dayDate(), it.calories100 * it.grams / 100,
             it.protein100 * it.grams / 100) }, mode(athleteSettings.nutritionMode) == CoachingMode.AI)
     val proteinAvg = review.avgProtein
-    val workoutHistory = remember(logs, exercises, extra) {
+    val workoutHistory = remember(logs, exercises, extra, crossfit) {
         val exerciseById = exercises.associateBy { it.id }
         val programmed = logs.mapNotNull { log ->
             val ex = exerciseById[log.exerciseId] ?: return@mapNotNull null
             ActivityInput(ex.name, log.dayDate(), detectMuscle(ex.name) ?: muscle(ex.muscleGroup) ?: Muscle.CORE,
                 log.setsDone, log.repsDone, log.perceivedEffort, source = "programme")
         }
-        programmed + extra.map { ActivityInput(it.name, it.dayDate(), muscle(it.muscleGroup) ?: Muscle.CORE,
+        val outside = extra.map { ActivityInput(it.name, it.dayDate(), muscle(it.muscleGroup) ?: Muscle.CORE,
             it.sets, it.reps, it.rpe, it.pain, source = "hors programme") }
+        val actualCrossfit = crossfit.flatMap { wod ->
+            val areas = wod.muscleGroups.split(",").mapNotNull { muscle(it.trim()) }.toSet()
+            crossfitActivities(runCatching { LocalDate.parse(wod.day) }.getOrDefault(LocalDate.MIN),
+                wod.title, wod.durationMinutes, wod.rpe, areas, wod.pain)
+        }
+        programmed + outside + actualCrossfit
     }
-    val proposal = remember(athleteSettings, nutrition, logs, exercises, extra, meals, metrics) {
+    val proposal = remember(athleteSettings, nutrition, logs, exercises, extra, crossfit, meals, metrics) {
         proposeSession(today, AthleteInputs(currentObjective, muscle(athleteSettings.weakMuscle),
             athleteSettings.sessionsPerWeek, metrics.firstOrNull()?.weightKg,
             MacroTarget(nutrition.calories, nutrition.protein, nutrition.carbs, nutrition.fat), proteinAvg, recordedDays),
@@ -106,6 +112,15 @@ fun AdaptiveCoachScreen(vm: CoachViewModel, athleteSettings: AthleteSettings, nu
         if (isHumanCoach) Text("Mode coach de démonstration sur cet appareil : pas encore de comptes distincts.", style = MaterialTheme.typography.bodySmall)
     }
 
+    CoachPanel("CROSSFIT • COURS PRIS EN COMPTE") {
+        if (crossfit.isEmpty()) Text("Aucun WOD encore renseigné : tu peux le saisir dans Sport.")
+        crossfit.take(5).forEach { wod ->
+            Text(wod.day + " • " + wod.title + " • " + wod.durationMinutes + " min • RPE " + wod.rpe, fontWeight = FontWeight.Bold)
+            Text("Zones : " + wod.muscleGroups.split(",").mapNotNull { muscle(it.trim())?.label }.joinToString(" · "),
+                style = MaterialTheme.typography.bodySmall)
+        }
+        Text("L'algorithme tient compte des muscles confirmés et de la difficulté du WOD pour limiter les répétitions de charge.", style = MaterialTheme.typography.bodySmall)
+    }
     CoachPanel("Activités libres / hors programmation") {
         Text("Saisir un exercice déjà réalisé pour que la prochaine séance tienne compte des muscles sollicités.")
         Button(onClick = { addingExtra = true }, modifier = Modifier.fillMaxWidth()) { Text("+ J'ai fait une séance hors programme") }
