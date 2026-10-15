@@ -5,6 +5,12 @@ plugins {
     id("com.google.devtools.ksp")
 }
 
+kotlin {
+    compilerOptions {
+        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
+    }
+}
+
 android {
     namespace = "com.coachlink.app"
     compileSdk = 36
@@ -21,7 +27,6 @@ android {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
-    kotlinOptions { jvmTarget = "17" }
     buildFeatures { compose = true; buildConfig = true }
     // Configure from -PcoachlinkPhotoApiUrl=https://your-secure-backend.example
     val photoApiUrl = providers.gradleProperty("coachlinkPhotoApiUrl").orElse("").get()
