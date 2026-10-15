@@ -47,7 +47,9 @@ jobs:
         shell: bash
         run: |
           echo "ANDROID_HOME=$ANDROID_HOME"
-          sdkmanager --install 'platforms;android-36' 'build-tools;36.0.0'
+          SDKMGR="$(find "$ANDROID_HOME/cmdline-tools" -type f -name sdkmanager -print -quit)"
+          test -n "$SDKMGR"
+          "$SDKMGR" --install 'platforms;android-36' 'build-tools;36.0.0'
 
       # L'archive V0.4 a gradle-wrapper.properties, mais pas gradle-wrapper.jar.
       # On installe donc directement Gradle 8.13 au lieu d'appeler ./gradlew.
