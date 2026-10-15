@@ -27,8 +27,8 @@ import com.google.mlkit.vision.codescanner.GmsBarcodeScanning
 import java.time.LocalDate
 import java.util.Locale
 
-private val primary = Color(0xFF16635D)
-private val tint = Color(0xFFF0F7F5)
+private val primary = Color(0xFF2CF2B0)
+private val tint = Color(0xFF11202D)
 private fun number(s: String): Double? = s.trim().replace(',', '.').toDoubleOrNull()
 private fun numberInt(s: String): Int? = s.trim().toIntOrNull()
 private fun fmt(n: Double): String = String.format(Locale.FRANCE, "%.1f", n)
@@ -49,6 +49,7 @@ fun CoachLinkApp(vm: CoachViewModel) {
     val settings by vm.settings.collectAsStateWithLifecycle(initialValue = null)
     val extra by vm.extraWorkouts.collectAsStateWithLifecycle(initialValue = emptyList())
     val plan by vm.mealPlan.collectAsStateWithLifecycle(initialValue = emptyList())
+    val crossfit by vm.crossfitSessions.collectAsStateWithLifecycle(initialValue = emptyList())
     val food by vm.food.collectAsStateWithLifecycle()
     val loading by vm.loading.collectAsStateWithLifecycle()
     val notice by vm.notice.collectAsStateWithLifecycle()
@@ -67,9 +68,10 @@ fun CoachLinkApp(vm: CoachViewModel) {
         notice?.let { snackbar.showSnackbar(it); vm.dismissNotice() }
     }
     Scaffold(
+        containerColor = MaterialTheme.colorScheme.background,
         snackbarHost = { SnackbarHost(snackbar) },
         topBar = {
-            Surface(color = primary) {
+            Surface(color = Color(0xFF102234)) {
                 Row(Modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = 18.dp, vertical = 14.dp),
                     horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                     Column {
@@ -86,7 +88,7 @@ fun CoachLinkApp(vm: CoachViewModel) {
             }
         },
         bottomBar = {
-            NavigationBar {
+            NavigationBar(containerColor = Color(0xFF0E1925)) {
                 labels.forEachIndexed { index, label ->
                     NavigationBarItem(selected = selected == index, onClick = { selected = index },
                         icon = { Icon(icons[index], contentDescription = label) }, label = { Text(label) })
@@ -101,11 +103,19 @@ fun CoachLinkApp(vm: CoachViewModel) {
                     WeeklyDashboardScreen(goal, meals, logs, metrics, isCoach)
                     HorizontalDivider()
                     Dashboard(goal, total, dayMeals, dayLogs, exercises, programs, metrics)
+                    Panel("CROSSFIT • CETTE SEMAINE") {
+                        val week = crossfit.count { runCatching {
+                            val date = LocalDate.parse(it.day)
+                            !date.isBefore(LocalDate.now().minusDays(6)) && !date.isAfter(LocalDate.now())
+                        }.getOrDefault(false) }
+                        Text("$week WOD renseigné(s)", style = MaterialTheme.typography.headlineSmall, color = primary, fontWeight = FontWeight.Black)
+                        Text("Ces cours modifient les recommandations du coach adaptatif.", style = MaterialTheme.typography.bodySmall)
+                    }
                 }
                 1 -> NutritionScreen(vm, goal, dayMeals, total, food, loading)
-                2 -> SportScreen(vm, programs, exercises, logs, isCoach || (settings?.sportMode == "HUMAN"), today)
+                2 -> SportScreen(vm, programs, exercises, logs, crossfit, isCoach || (settings?.sportMode == "HUMAN"), today)
                 3 -> {
-                    AdaptiveCoachScreen(vm, settings ?: AthleteSettings(), goal, meals, logs, exercises, extra, metrics, isCoach)
+                    AdaptiveCoachScreen(vm, settings ?: AthleteSettings(), goal, meals, logs, exercises, extra, crossfit, metrics, isCoach)
                     if (isCoach || settings?.nutritionMode == "HUMAN") {
                         HorizontalDivider()
                         CoachScreen(vm, goal, total, dayLogs, metrics, programs, exercises, dayMeals)
@@ -120,7 +130,7 @@ fun CoachLinkApp(vm: CoachViewModel) {
 @Composable
 private fun Panel(title: String, content: @Composable ColumnScope.() -> Unit) {
     Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
-        shape = RoundedCornerShape(18.dp), modifier = Modifier.fillMaxWidth()) {
+        shape = RoundedCornerShape(22.dp), modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp), content = {
             Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
             content()
@@ -273,11 +283,13 @@ private fun startScanner(context: Context, onFound: (String) -> Unit, onError: (
 }
 
 @Composable
-private fun SportScreen(vm: CoachViewModel, programs: List<Program>, exercises: List<Exercise>, logs: List<WorkoutLog>, coach: Boolean, today: String) {
+private fun SportScreen(vm: CoachViewModel, programs: List<Program>, exercises: List<Exercise>, logs: List<WorkoutLog>, crossfit: List<CrossFitSession>, coach: Boolean, today: String) {
     var selectedExercise by remember { mutableStateOf<Exercise?>(null) }
     var addProgram by remember { mutableStateOf(false) }
     var addToProgram by remember { mutableStateOf<Long?>(null) }
-    Text("Programmes sportifs", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+    Text("Entraînements", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Black)
+    CrossFitJournalScreen(vm, crossfit)
+    Text("Programmes sportifs", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
     if (coach) Button(onClick = { addProgram = true }, colors = ButtonDefaults.buttonColors(containerColor = primary)) {
         Icon(Icons.Default.Add, contentDescription = null); Spacer(Modifier.width(5.dp)); Text("Créer un programme")
     }
