@@ -10,6 +10,9 @@ class CoachRepository(private val dao: CoachDao) {
     val exercises: Flow<List<Exercise>> = dao.exercises()
     val logs: Flow<List<WorkoutLog>> = dao.logs()
     val metrics: Flow<List<BodyMetric>> = dao.metrics()
+    val settings: Flow<AthleteSettings?> = dao.settings()
+    val extraWorkouts: Flow<List<ExtraWorkout>> = dao.extraWorkouts()
+    val mealPlan: Flow<List<MealPlanIngredient>> = dao.mealPlan()
 
     suspend fun saveGoal(target: MacroTarget) = dao.saveGoal(Goal(calories = target.calories, protein = target.protein, carbs = target.carbs, fat = target.fat))
     suspend fun addMeal(meal: Meal) = dao.addMeal(meal)
