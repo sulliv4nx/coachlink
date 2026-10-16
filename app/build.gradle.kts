@@ -17,7 +17,14 @@ android {
         versionName = "1.1.0-beta"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
-    buildTypes { release { isMinifyEnabled = false } }
+    buildTypes {
+        debug {
+            // Separate debug builds from already-installed local-only app data.
+            applicationIdSuffix = ".preview"
+            versionNameSuffix = "-preview"
+        }
+        release { isMinifyEnabled = false }
+    }
     compileOptions { sourceCompatibility = JavaVersion.VERSION_17; targetCompatibility = JavaVersion.VERSION_17 }
     buildFeatures { compose = true }
 }
