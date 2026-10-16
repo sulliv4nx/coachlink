@@ -1,0 +1,35 @@
+name: CoachLink One - Android APK
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - coachlink-one-2027
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Install Android SDK 36
+        run: |
+          SDKMGR="$(find "$ANDROID_HOME/cmdline-tools" -type f -name sdkmanager -print -quit)"
+          test -n "$SDKMGR"
+          "$SDKMGR" --install 'platforms;android-36' 'build-tools;36.0.0'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.13'
+      - name: Unit tests and debug APK
+        run: gradle --no-daemon :app:testDebugUnitTest :app:assembleDebug
+      - name: Verify APK
+        run: test -s app/build/outputs/apk/debug/app-debug.apk
+      - uses: actions/upload-artifact@v4
+        with:
+          name: CoachLink-One-2027-APK-debug
+          path: app/build/outputs/apk/debug/app-debug.apk
+          retention-days: 14

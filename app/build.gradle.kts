@@ -5,40 +5,25 @@ plugins {
     id("com.google.devtools.ksp")
 }
 
-kotlin {
-    compilerOptions {
-        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
-    }
-}
-
+kotlin { compilerOptions { jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17) } }
 android {
-    namespace = "com.coachlink.app"
+    namespace = "com.coachlink.one"
     compileSdk = 36
     defaultConfig {
-        applicationId = "com.coachlink.app"
+        applicationId = "com.coachlink.one"
         minSdk = 26
         targetSdk = 36
-        versionCode = 4
-        versionName = "0.4.0"
+        versionCode = 1
+        versionName = "1.0.0-beta"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
     buildTypes { release { isMinifyEnabled = false } }
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_17
-        targetCompatibility = JavaVersion.VERSION_17
-    }
-    buildFeatures { compose = true; buildConfig = true }
-    // Configure from -PcoachlinkPhotoApiUrl=https://your-secure-backend.example
-    val photoApiUrl = providers.gradleProperty("coachlinkPhotoApiUrl").orElse("").get()
-    require(photoApiUrl.isBlank() || photoApiUrl.startsWith("https://")) { "URL HTTPS requise pour l'analyse photo" }
-    defaultConfig {
-        buildConfigField("String", "PHOTO_API_URL", "\"${photoApiUrl.replace("\\", "\\\\").replace("\"", "\\\"")}\"")
-    }
+    compileOptions { sourceCompatibility = JavaVersion.VERSION_17; targetCompatibility = JavaVersion.VERSION_17 }
+    buildFeatures { compose = true }
 }
 
 dependencies {
-    val composeBom = platform("androidx.compose:compose-bom:2026.05.01")
-    implementation(composeBom)
+    implementation(platform("androidx.compose:compose-bom:2026.05.01"))
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.ui:ui-tooling-preview")
     implementation("androidx.compose.material3:material3")
@@ -49,7 +34,6 @@ dependencies {
     implementation("androidx.room:room-runtime:2.8.5")
     implementation("androidx.room:room-ktx:2.8.5")
     ksp("androidx.room:room-compiler:2.8.5")
-    implementation("com.google.android.gms:play-services-code-scanner:16.1.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2")
     testImplementation("junit:junit:4.13.2")
     debugImplementation("androidx.compose.ui:ui-tooling")
