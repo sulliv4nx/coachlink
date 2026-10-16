@@ -31,6 +31,13 @@ import kotlinx.coroutines.delay
     Panel("CHRONOMÈTRE DE REPOS") {
         Text("${"%02d".format(timerRemaining/60)}:${"%02d".format(timerRemaining%60)}",style=MaterialTheme.typography.displayMedium,
             color=MaterialTheme.colorScheme.primary,fontWeight=FontWeight.Black)
+        Row(horizontalArrangement=Arrangement.spacedBy(6.dp)) {
+            listOf(60,90,120).forEach { sec ->
+                FilterChip(selected=timerDuration==sec,onClick={
+                    timerDuration=sec;timerRemaining=sec;timerRunning=false
+                },label={Text("${sec}s")})
+            }
+        }
         Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
             OutlinedButton(onClick={timerRunning=!timerRunning},enabled=timerRemaining>0){Text(if(timerRunning)"Pause" else "Démarrer")}
             OutlinedButton(onClick={timerRemaining=timerDuration;timerRunning=timerDuration>0}){Text("Recommencer")}

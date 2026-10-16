@@ -79,6 +79,24 @@ import kotlin.math.roundToInt
         Text("Protéines ${fmt(total.protein,0)} g • Glucides ${fmt(total.carbs,0)} g • Lipides ${fmt(total.fat,0)} g")
         Text("${logs.count{it.date==today}} exercice(s) enregistré(s) aujourd'hui",style=MaterialTheme.typography.bodySmall)
     }
+    Panel("BILAN VISUEL • 7 JOURS") {
+        (6 downTo 0).forEach { daysAgo ->
+            val day = LocalDate.now().minusDays(daysAgo.toLong()).toString()
+            val dayMeals = foods.filter { it.date == day }
+            val dayKcal = dayMeals.sumOf { it.kcal100 * it.grams / 100.0 }
+            val training = logs.count { it.date == day }
+            Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween) {
+                Text(day.takeLast(5),style=MaterialTheme.typography.labelMedium)
+                Text(if (dayMeals.isEmpty()) "Non renseigné · $training ex." else "${dayKcal.roundToInt()} kcal · $training ex.",
+                    style=MaterialTheme.typography.labelMedium)
+            }
+            LinearProgressIndicator(progress={
+                if (dayMeals.isEmpty() || target == null) 0f else (dayKcal/target).toFloat().coerceIn(0f,1f)
+            },modifier=Modifier.fillMaxWidth().height(6.dp),color=MaterialTheme.colorScheme.secondary)
+        }
+        Text("Barres : apports vs cible du jour ; les repas non saisis ne sont pas interprétés comme zéro calorie.",
+            style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+    }
     Panel("OBJECTIFS ENTRE AMIS") {
         Text("Envoie uniquement ton objectif et importe celui d'un ami ayant CoachLink One.")
         Button(onClick={share=true},enabled=complete,modifier=Modifier.fillMaxWidth()) {Icon(Icons.Default.IosShare,null);Text(" Partager / importer")}
