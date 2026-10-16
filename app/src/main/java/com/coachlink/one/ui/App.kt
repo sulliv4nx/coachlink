@@ -16,6 +16,16 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.coachlink.one.data.*
@@ -25,6 +35,15 @@ import com.coachlink.one.data.*
     val lock=remember {LocalLock(ctx)}
     var unlocked by remember {mutableStateOf(false)}
     var configured by remember {mutableStateOf(lock.configured)}
+    if(!unlocked) {
+        LoginScreen(configured,lock,onCreated={name->
+            // New profile creation is attempted only after the PIN has been persisted.
+            vm.saveProfile(Profile(name=name,age=0,sex="NA",heightCm=0.0,startWeightKg=0.0,goalWeightKg=0.0,goalDate="",objective="MAINTAIN"))
+            configured=true
+            unlocked=true
+        },onUnlocked={unlocked=true})
+        return
+    }
     val profile by vm.profile.collectAsStateWithLifecycle(initialValue=null)
     val measurements by vm.measurements.collectAsStateWithLifecycle(initialValue=emptyList())
     val foods by vm.foods.collectAsStateWithLifecycle(initialValue=emptyList())
@@ -43,13 +62,6 @@ import com.coachlink.one.data.*
     val message by vm.notice.collectAsStateWithLifecycle(initialValue="")
     val snack=remember {SnackbarHostState()}
     LaunchedEffect(message) { if(message.isNotBlank()) {snack.showSnackbar(message);vm.clearNotice()} }
-    if(!unlocked) {
-        LoginScreen(configured,lock,onCreated={name->
-            vm.saveProfile(Profile(name=name,age=0,sex="NA",heightCm=0.0,startWeightKg=0.0,goalWeightKg=0.0,goalDate="",objective="MAINTAIN"))
-            configured=true;unlocked=true
-        },onUnlocked={unlocked=true})
-        return
-    }
     var tab by remember {mutableIntStateOf(0)}
     val labels=listOf("Profil","Mesures","Nutrition","Sport")
     val icons=listOf(Icons.Default.Dashboard,Icons.Default.Straighten,Icons.Default.Restaurant,Icons.Default.FitnessCenter)
@@ -88,26 +100,87 @@ import com.coachlink.one.data.*
     var pin by remember {mutableStateOf("")}
     var confirm by remember {mutableStateOf("")}
     var error by remember {mutableStateOf("")}
-    Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background),contentAlignment=Alignment.Center) {
-        Column(Modifier.padding(26.dp),verticalArrangement=Arrangement.spacedBy(18.dp)) {
-            Icon(Icons.Default.Bolt,null,tint=MaterialTheme.colorScheme.primary,modifier=Modifier.size(52.dp))
+    var busy by remember {mutableStateOf(false)}
+    val scope=rememberCoroutineScope()
+    val focus=LocalFocusManager.current
+    fun submit() {
+        if(busy)return
+        if(configured && pin.length!=6) {error="Saisis ton PIN à 6 chiffres.";return}
+        if(!configured && (name.trim().length<2 || pin.length!=6 || pin!=confirm)) {
+            error="Indique ton prénom et deux codes PIN identiques de 6 chiffres."
+            return
+        }
+        focus.clearFocus()
+        error=""
+        busy=true
+        // PBKDF2 can be costly on certain devices: never block the UI thread.
+        scope.launch {
+            val result=runCatching {
+                withContext(Dispatchers.Default) {
+                    if(configured)lock.check(pin) else lock.create(pin)
+                }
+            }
+            busy=false
+            result.onSuccess { accepted ->
+                if(accepted) {
+                    if(configured)onUnlocked() else onCreated(name.trim())
+                } else {
+                    error=if(configured) "PIN incorrect, ou attente temporaire après plusieurs essais." else
+                        "Le PIN n'a pas pu être enregistré. Réessaie."
+                }
+            }.onFailure {
+                error="Erreur lors de la connexion : ${it.message ?: "vérification impossible"}"
+            }
+        }
+    }
+    Box(
+        Modifier.fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
+            .navigationBarsPadding()
+            .imePadding()
+            .verticalScroll(rememberScrollState()),
+        contentAlignment=Alignment.Center
+    ) {
+        Column(Modifier.fillMaxWidth().widthIn(max=440.dp).padding(24.dp),
+            verticalArrangement=Arrangement.spacedBy(16.dp)) {
+            Icon(Icons.Default.Bolt,null,tint=MaterialTheme.colorScheme.primary,modifier=Modifier.size(48.dp))
             Text("COACHLINK",fontWeight=FontWeight.Black,style=MaterialTheme.typography.displaySmall)
             Text("ONE / PERSONAL TRACKER",color=MaterialTheme.colorScheme.primary,fontWeight=FontWeight.Bold)
-            Text(if(configured) "Accède à ton espace personnel" else "Crée ton espace de suivi local",style=MaterialTheme.typography.titleMedium)
+            Text(if(configured) "Connecte-toi à ton espace" else "Crée ton espace personnel",
+                style=MaterialTheme.typography.titleMedium)
             if(!configured) Field("Ton prénom",name,{name=it})
-            OutlinedTextField(value=pin,onValueChange={pin=it.filter(Char::isDigit).take(6)},label={Text("PIN à 6 chiffres")},
-                modifier=Modifier.fillMaxWidth(),singleLine=true,keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.NumberPassword),
-                visualTransformation=PasswordVisualTransformation())
-            if(!configured) OutlinedTextField(value=confirm,onValueChange={confirm=it.filter(Char::isDigit).take(6)},
-                label={Text("Confirme le PIN")},modifier=Modifier.fillMaxWidth(),singleLine=true,
-                keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.NumberPassword),visualTransformation=PasswordVisualTransformation())
-            if(error.isNotEmpty()) Text(error,color=MaterialTheme.colorScheme.error)
-            Button(onClick={
-                if(configured) {if(lock.check(pin)) {error="";onUnlocked()} else error="PIN incorrect ou verrouillage temporaire"}
-                else if(name.trim().length<2 || pin.length!=6 || pin!=confirm) error="Prénom et codes PIN identiques requis"
-                else if(lock.create(pin)) onCreated(name.trim()) else error="Impossible de créer ce code"
-            },modifier=Modifier.fillMaxWidth().height(55.dp)) {Text(if(configured)"Se connecter" else "Créer mon suivi",fontWeight=FontWeight.Bold)}
-            Text("Connexion locale par PIN : pas de compte cloud ni de récupération à distance dans cette version.",
+            OutlinedTextField(
+                value=pin,
+                onValueChange={pin=it.filter(Char::isDigit).take(6);error=""},
+                label={Text("PIN à 6 chiffres")},
+                modifier=Modifier.fillMaxWidth(),singleLine=true,
+                keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.NumberPassword,
+                    imeAction=if(configured)ImeAction.Done else ImeAction.Next),
+                keyboardActions=KeyboardActions(onDone={submit()}),
+                visualTransformation=PasswordVisualTransformation()
+            )
+            if(!configured) OutlinedTextField(
+                value=confirm,onValueChange={confirm=it.filter(Char::isDigit).take(6);error=""},
+                label={Text("Confirmer le PIN")},
+                modifier=Modifier.fillMaxWidth(),singleLine=true,
+                keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.NumberPassword,imeAction=ImeAction.Done),
+                keyboardActions=KeyboardActions(onDone={submit()}),
+                visualTransformation=PasswordVisualTransformation()
+            )
+            if(error.isNotEmpty())Text(error,color=MaterialTheme.colorScheme.error)
+            Button(onClick={submit},enabled=!busy,modifier=Modifier.fillMaxWidth().height(56.dp)) {
+                if(busy) {
+                    CircularProgressIndicator(modifier=Modifier.size(20.dp),strokeWidth=2.dp,
+                        color=MaterialTheme.colorScheme.onPrimary)
+                    Spacer(Modifier.width(10.dp))
+                }
+                Text(if(busy)"Vérification…" else if(configured)"Se connecter" else "Créer mon suivi",
+                    fontWeight=FontWeight.Bold)
+            }
+            Text("Le bouton reste accessible même si le clavier Android est ouvert.",
+                color=MaterialTheme.colorScheme.onSurfaceVariant,
+                style=MaterialTheme.typography.labelSmall)
+            Text("Code PIN local : pas de compte cloud ni de récupération à distance.",
                 color=MaterialTheme.colorScheme.onSurfaceVariant,style=MaterialTheme.typography.bodySmall)
         }
     }

@@ -13,12 +13,12 @@ android {
         applicationId = "com.coachlink.one"
         minSdk = 26
         targetSdk = 36
-        versionCode = 4
-        versionName = "1.3.0-beta"
+        versionCode = 5
+        versionName = "1.3.1-beta"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
     buildTypes {
-        debug { applicationIdSuffix = ".preview13"; versionNameSuffix = "-preview" }
+        debug { applicationIdSuffix = ".loginfix"; versionNameSuffix = "-preview" }
         release { isMinifyEnabled = false }
     }
     compileOptions { sourceCompatibility = JavaVersion.VERSION_17; targetCompatibility = JavaVersion.VERSION_17 }

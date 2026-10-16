@@ -21,9 +21,9 @@ class LocalLock(context: Context) {
     fun create(pin: String): Boolean {
         if(configured || !pin.matches(Regex("[0-9]{6}"))) return false
         val salt = ByteArray(24).also { SecureRandom().nextBytes(it) }
-        prefs.edit().putString("salt",Base64.getEncoder().encodeToString(salt))
-            .putString("hash",Base64.getEncoder().encodeToString(derive(pin,salt))).apply()
-        return true
+        // Commit is synchronous: the PIN must exist on disk before the UI unlocks.
+        return prefs.edit().putString("salt",Base64.getEncoder().encodeToString(salt))
+            .putString("hash",Base64.getEncoder().encodeToString(derive(pin,salt))).commit()
     }
     fun check(pin: String): Boolean {
         if (!configured || SystemClock.elapsedRealtime() < blockedUntil) return false
