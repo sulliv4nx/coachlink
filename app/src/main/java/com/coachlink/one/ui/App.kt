@@ -34,6 +34,12 @@ import com.coachlink.one.data.*
     val friends by vm.friends.collectAsStateWithLifecycle(initialValue=emptyList())
     val sportGoals by vm.sportGoals.collectAsStateWithLifecycle(initialValue=emptyList())
     val sportSessions by vm.sportSessions.collectAsStateWithLifecycle(initialValue=emptyList())
+    val workoutPlans by vm.workoutPlans.collectAsStateWithLifecycle(initialValue=emptyList())
+    val workoutBlocks by vm.workoutBlocks.collectAsStateWithLifecycle(initialValue=emptyList())
+    val workoutMovements by vm.workoutMovements.collectAsStateWithLifecycle(initialValue=emptyList())
+    val workoutRuns by vm.workoutRuns.collectAsStateWithLifecycle(initialValue=emptyList())
+    val workoutSetResults by vm.workoutSetResults.collectAsStateWithLifecycle(initialValue=emptyList())
+    val workoutBlockResults by vm.workoutBlockResults.collectAsStateWithLifecycle(initialValue=emptyList())
     val message by vm.notice.collectAsStateWithLifecycle(initialValue="")
     val snack=remember {SnackbarHostState()}
     LaunchedEffect(message) { if(message.isNotBlank()) {snack.showSnackbar(message);vm.clearNotice()} }
@@ -69,7 +75,8 @@ import com.coachlink.one.data.*
                 0 -> ProfileScreen(vm,profile,measurements,foods,logs,friends,sportGoals,sportSessions)
                 1 -> MeasuresScreen(vm,profile,measurements)
                 2 -> NutritionScreen(vm,profile,measurements,foods)
-                else -> SportScreen(vm,programs,exercises,logs,sportGoals,sportSessions,measurements.firstOrNull()?.weightKg?:profile?.startWeightKg)
+                else -> SportScreen(vm,programs,exercises,logs,sportGoals,sportSessions,measurements.firstOrNull()?.weightKg?:profile?.startWeightKg,
+                    workoutPlans,workoutBlocks,workoutMovements,workoutRuns,workoutSetResults,workoutBlockResults)
             }
             Spacer(Modifier.height(14.dp))
         }

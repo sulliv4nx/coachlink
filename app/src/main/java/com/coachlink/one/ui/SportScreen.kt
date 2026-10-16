@@ -18,7 +18,20 @@ import kotlin.math.roundToInt
 import kotlinx.coroutines.delay
 
 @Composable fun SportScreen(vm:TrackerViewModel,programs:List<Program>,exercises:List<Exercise>,logs:List<TrainingLog>,
-                      goals:List<SportGoal>,sessions:List<SportSession>,weightKg:Double?) {
+                      goals:List<SportGoal>,sessions:List<SportSession>,weightKg:Double?,
+                      workoutPlans:List<WorkoutPlan>,workoutBlocks:List<WorkoutBlock>,workoutMovements:List<WorkoutMovement>,
+                      workoutRuns:List<WorkoutRun>,workoutSetResults:List<WorkoutSetResult>,workoutBlockResults:List<WorkoutBlockResult>) {
+    var sportTab by remember { mutableIntStateOf(0) }
+    Text("SPORT / COACHLINK ONE", style=MaterialTheme.typography.headlineMedium,fontWeight=FontWeight.Black)
+    Row(Modifier.horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(6.dp)) {
+        listOf("Planning & Live","Objectifs","Mes anciens programmes").forEachIndexed {i,label->
+            FilterChip(selected=sportTab==i,onClick={sportTab=i},label={Text(label)})
+        }
+    }
+    if(sportTab==0) {
+        WorkoutPlannerScreen(vm,workoutPlans,workoutBlocks,workoutMovements,workoutRuns,workoutSetResults,workoutBlockResults)
+        return
+    }
     var newGoal by remember { mutableStateOf(false) }
     var newSession by remember { mutableStateOf(false) }
     var newProgram by remember{mutableStateOf(false)}
@@ -31,12 +44,15 @@ import kotlinx.coroutines.delay
         if(timerRunning && timerRemaining>0) {delay(1000);timerRemaining-=1}
         else if(timerRemaining==0) timerRunning=false
     }
-    Text("Entraînement",style=MaterialTheme.typography.headlineMedium,fontWeight=FontWeight.Black)
-    Text("Programmation, charges et temps de repos",color=MaterialTheme.colorScheme.onSurfaceVariant)
-    SportGoalsPanel(vm,goals,sessions) { newGoal=true }
-    SportSessionsPanel(vm,sessions,onNew={ newSession=true })
-    Button(onClick={newProgram=true},modifier=Modifier.fillMaxWidth()){Icon(Icons.Default.Add,null);Text(" Créer une programmation")}
-    Panel("CHRONOMÈTRE DE REPOS") {
+    Text(if(sportTab==1)"Objectifs & dépenses" else "Programmation historique",style=MaterialTheme.typography.titleLarge,fontWeight=FontWeight.Bold)
+    if(sportTab==1) {
+        SportGoalsPanel(vm,goals,sessions) { newGoal=true }
+        SportSessionsPanel(vm,sessions,onNew={ newSession=true })
+    }
+    if(sportTab==2) Button(onClick={newProgram=true},modifier=Modifier.fillMaxWidth()){
+        Icon(Icons.Default.Add,null);Text(" Créer une programmation")
+    }
+    if(sportTab==2) Panel("CHRONOMÈTRE DE REPOS") {
         Text("${"%02d".format(timerRemaining/60)}:${"%02d".format(timerRemaining%60)}",style=MaterialTheme.typography.displayMedium,
             color=MaterialTheme.colorScheme.primary,fontWeight=FontWeight.Black)
         Row(horizontalArrangement=Arrangement.spacedBy(6.dp)) {
@@ -52,7 +68,7 @@ import kotlinx.coroutines.delay
         }
         Text("Le repos démarre automatiquement après l'enregistrement d'un exercice.",style=MaterialTheme.typography.bodySmall)
     }
-    Panel("MES PROGRAMMES") {
+    if(sportTab==2) Panel("MES PROGRAMMES") {
         if(programs.isEmpty())Text("Crée ton premier programme : force, hypertrophie ou circuit CrossFit.")
         programs.forEach{p->
             val items=exercises.filter{it.programId==p.id}
@@ -74,7 +90,7 @@ import kotlinx.coroutines.delay
             }
         }
     }
-    Panel("HISTORIQUE DES SÉANCES") {
+    if(sportTab==2) Panel("HISTORIQUE DES SÉANCES") {
         if(logs.isEmpty())Text("Aucun exercice réalisé pour le moment.")
         logs.take(15).forEach{log->
             Text("${log.date} • ${log.name}",fontWeight=FontWeight.Bold)

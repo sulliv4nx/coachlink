@@ -19,3 +19,18 @@ Build : `gradle :app:testDebugUnitTest :app:assembleDebug`. Workflow GitHub Acti
 - Après séance: saisie de la durée, des kcal relevées (montre/appareil) ou estimation facultative à partir du poids et de MET. Les estimations sont approximatives et ne sont pas automatiquement déduites des calories consommées.
 - Migration Room 1 vers 2: conserve les anciens repas, mesures, programmes, performances et amis.
 - Recherche Open Food Facts sous sa licence ODbL, attribution et conditions sur openfoodfacts.org. Pas d'identification de produits maison fiable à partir d'un seul nom.
+
+
+## CoachLink One V1.2 — Planning et entraînement en direct
+
+- Construis plusieurs séances datées à l'avance, puis duplique-les pour un autre jour.
+- Chaque séance comporte des blocs Force/Échauffement/AMRAP/EMOM/For Time/Tabata.
+- Chaque bloc contient des mouvements (séries, répétitions, charges, repos).
+- Démarre une séance, marque les séries réellement réalisées ou passées, avance bloc par bloc.
+- Le chronomètre général et le compteur de bloc sont enregistrés en base Room et reprennent après fermeture de l'interface.
+- La pause gèle les temps et le repos ; un retour en cours de séance conserve les saisies.
+- Le bilan final enregistre les calories de la montre si indiquées, sinon « non renseignées » ; aucune déduction automatique du journal nutritionnel.
+- Anciennes pesées, repas, entraînements V1.1 conservés par migration de base Room 2→3.
+- Cette version debug « Preview » reste séparée d'une installation de production, avec une base distincte.
+
+**Limites du prototype** : timers mis à jour visuellement lorsque l'app est au premier plan (horloge persistante si elle est quittée) ; notifications sur écran verrouillé et intégration montre non encore implémentées. On ne déduit pas automatiquement des records estimés ou des calories d'une séance.
