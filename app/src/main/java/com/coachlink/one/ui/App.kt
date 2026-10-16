@@ -53,7 +53,7 @@ import com.coachlink.one.data.*
                 Column {Text("COACHLINK / ONE",color=MaterialTheme.colorScheme.primary,fontWeight=FontWeight.Black,
                     style=MaterialTheme.typography.titleLarge)
                     Text("TON SUIVI • TON RYTHME",color=MaterialTheme.colorScheme.onSurfaceVariant,style=MaterialTheme.typography.labelSmall)}
-                IconButton(onClick={unlocked=false}) {Icon(Icons.Default.LockOutline,"Verrouiller")}
+                IconButton(onClick={unlocked=false}) {Icon(Icons.Default.Lock,"Verrouiller")}
             }
         }},
         bottomBar={NavigationBar(containerColor=Color(0xFF122337)) {

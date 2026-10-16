@@ -66,7 +66,7 @@ import com.coachlink.one.domain.bmi
     },confirmButton={Button(onClick={
         val w=double(weight)
         val optional=listOf(waist,chest,hips,arm,thigh)
-        if(!validDate(date)|| w==null || w !in 25.0..350.0 || optional.any{it.isNotBlank() && (double(it)==null || double(it) !in 10.0..250.0)}) error="Valeurs ou date incorrectes"
+        if(!validDate(date)|| w==null || w !in 25.0..350.0 || optional.any{it.isNotBlank() && (double(it)==null || (double(it) ?: 0.0) !in 10.0..250.0)}) error="Valeurs ou date incorrectes"
         else {vm.addMeasurement(Measurement(date=date,weightKg=w,waistCm=double(waist),chestCm=double(chest),hipsCm=double(hips),armCm=double(arm),thighCm=double(thigh)));onClose()}
     }){Text("Enregistrer")}},dismissButton={TextButton(onClick=onClose){Text("Annuler")}})
 }
