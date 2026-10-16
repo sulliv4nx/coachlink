@@ -95,11 +95,11 @@ class TrackerViewModel(app: Application): AndroidViewModel(app) {
         return true
     }
     fun removeWorkoutBlock(id:Long)=run("Bloc supprimé") {dao.removeBlockWithMovements(id)}
-    fun addWorkoutMovement(blockId:Long,position:Int,name:String,sets:Int,reps:Int,loadKg:Double,restSec:Int):Boolean {
-        if(name.trim().length !in 2..100 || sets !in 1..30 || reps !in 1..300 || !loadKg.isFinite() || loadKg !in 0.0..1000.0 || restSec !in 0..1800) {
+    fun addWorkoutMovement(blockId:Long,position:Int,name:String,sets:Int,reps:Int,loadKg:Double,restSec:Int,supersetGroup:String=""):Boolean {
+        if(name.trim().length !in 2..100 || sets !in 1..30 || reps !in 1..300 || !loadKg.isFinite() || loadKg !in 0.0..1000.0 || restSec !in 0..1800 || supersetGroup !in listOf("","A","B","C")) {
             _notice.value="Exercice : vérifie séries, reps, charge et repos";return false
         }
-        run("Mouvement ajouté") {dao.insertWorkoutMovement(WorkoutMovement(blockId=blockId,position=position,name=name.trim(),sets=sets,reps=reps,loadKg=loadKg,restSec=restSec))}
+        run("Mouvement ajouté") {dao.insertWorkoutMovement(WorkoutMovement(blockId=blockId,position=position,name=name.trim(),sets=sets,reps=reps,loadKg=loadKg,restSec=restSec,supersetGroup=supersetGroup))}
         return true
     }
     fun removeWorkoutMovement(id:Long)=run("Mouvement supprimé") {dao.deleteWorkoutMovement(id)}
@@ -122,8 +122,8 @@ class TrackerViewModel(app: Application): AndroidViewModel(app) {
             }
         }.onFailure{_notice.value=it.message?:"Erreur du chrono"}}
     }
-    fun recordLiveSet(runId:Long,step:WorkoutMovement,reps:Int,kg:Double,status:String="DONE") {
-        if(reps !in 0..300 || !kg.isFinite() || kg !in 0.0..1000.0 || status !in listOf("DONE","SKIP")) {
+    fun recordLiveSet(runId:Long,step:WorkoutMovement,reps:Int,kg:Double,status:String="DONE",setType:String="NORMAL",rpe:Double?=null) {
+        if(reps !in 0..300 || !kg.isFinite() || kg !in 0.0..1000.0 || status !in listOf("DONE","SKIP") || setType !in listOf("NORMAL","WARMUP","DROPSET","FAILURE") || (rpe!=null && (!rpe.isFinite() || rpe !in 1.0..10.0))) {
             _notice.value="Valeurs de série incorrectes";return
         }
         viewModelScope.launch {kotlin.runCatching {
@@ -132,7 +132,8 @@ class TrackerViewModel(app: Application): AndroidViewModel(app) {
             val existing=dao.recordedSets(run.id,step.id)
             val nextNumber=(existing.maxOfOrNull{it.setNumber}?:0)+1
             dao.insertWorkoutSetResult(WorkoutSetResult(runId=runId,movementId=step.id,movementName=step.name,
-                setNumber=nextNumber,reps=if(status=="SKIP")0 else reps,loadKg=if(status=="SKIP")0.0 else kg,status=status))
+                setNumber=nextNumber,reps=if(status=="SKIP")0 else reps,loadKg=if(status=="SKIP")0.0 else kg,status=status,
+                setType=if(status=="SKIP")"NORMAL" else setType,rpe=if(status=="SKIP")null else rpe))
             val now=System.currentTimeMillis()
             dao.updateWorkoutRun(run.copy(restStartedAtMs=if(status=="DONE" && step.restSec>0)now else 0L,
                 restRemainingSec=if(status=="DONE")step.restSec else 0))
