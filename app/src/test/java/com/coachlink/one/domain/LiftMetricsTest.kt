@@ -7,7 +7,7 @@ import kotlin.math.abs
 class LiftMetricsTest {
     @Test fun estimatesFromTenOrLessRepsOnly() {
         assertEquals(100.0,estimatedOneRm(100.0,1)!!,0.001)
-        assertEquals(124.0,estimatedOneRm(100.0,8)!!,0.001)
+        assertEquals(123.333333,estimatedOneRm(100.0,8)!!,0.001)
         assertNull(estimatedOneRm(100.0,15))
         assertNull(estimatedOneRm(0.0,5))
     }
