@@ -123,7 +123,8 @@ data class WorkoutMovement(
     val sets: Int,
     val reps: Int,
     val loadKg: Double,
-    val restSec: Int
+    val restSec: Int,
+    @ColumnInfo(defaultValue="''") val supersetGroup: String = ""
 )
 
 /** One active session at most. Timestamps are persisted so UI recreation does not reset timers. */
@@ -153,7 +154,9 @@ data class WorkoutSetResult(
     val reps: Int,
     val loadKg: Double,
     val status: String="DONE",
-    val recordedAtMs: Long=System.currentTimeMillis()
+    val recordedAtMs: Long=System.currentTimeMillis(),
+    @ColumnInfo(defaultValue="'NORMAL'") val setType:String="NORMAL",
+    val rpe:Double?=null
 )
 
 @Entity(tableName="workout_block_results",indices=[Index("runId")])
@@ -253,7 +256,7 @@ data class FriendGoal(
     @Query("DELETE FROM friend_goals WHERE id=:id") suspend fun deleteFriendGoal(id: Long)
 }
 
-@Database(entities=[Profile::class,Measurement::class,Food::class,Program::class,Exercise::class,TrainingLog::class,FriendGoal::class,SportGoal::class,SportSession::class,WorkoutPlan::class,WorkoutBlock::class,WorkoutMovement::class,WorkoutRun::class,WorkoutSetResult::class,WorkoutBlockResult::class],version=3,exportSchema=false)
+@Database(entities=[Profile::class,Measurement::class,Food::class,Program::class,Exercise::class,TrainingLog::class,FriendGoal::class,SportGoal::class,SportSession::class,WorkoutPlan::class,WorkoutBlock::class,WorkoutMovement::class,WorkoutRun::class,WorkoutSetResult::class,WorkoutBlockResult::class],version=4,exportSchema=false)
 abstract class TrackerDb: RoomDatabase() {
     abstract fun dao(): TrackerDao
     companion object {
@@ -289,9 +292,16 @@ abstract class TrackerDb: RoomDatabase() {
                 db.execSQL("CREATE INDEX IF NOT EXISTS index_workout_block_results_runId ON workout_block_results (runId)")
             }
         }
+        private val MIGRATION_3_4 = object: androidx.room.migration.Migration(3,4) {
+            override fun migrate(db: androidx.sqlite.db.SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE workout_movements ADD COLUMN supersetGroup TEXT NOT NULL DEFAULT ''")
+                db.execSQL("ALTER TABLE workout_set_results ADD COLUMN setType TEXT NOT NULL DEFAULT 'NORMAL'")
+                db.execSQL("ALTER TABLE workout_set_results ADD COLUMN rpe REAL")
+            }
+        }
         @Volatile private var db: TrackerDb? = null
         fun get(context: Context): TrackerDb = db ?: synchronized(this) {
-            db ?: Room.databaseBuilder(context.applicationContext,TrackerDb::class.java,"coachlink-one.db").addMigrations(MIGRATION_1_2,MIGRATION_2_3).build().also { db=it }
+            db ?: Room.databaseBuilder(context.applicationContext,TrackerDb::class.java,"coachlink-one.db").addMigrations(MIGRATION_1_2,MIGRATION_2_3,MIGRATION_3_4).build().also { db=it }
         }
     }
 }
