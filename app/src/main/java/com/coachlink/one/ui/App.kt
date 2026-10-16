@@ -19,8 +19,6 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.platform.LocalFocusManager
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import kotlinx.coroutines.Dispatchers
@@ -168,7 +166,7 @@ import com.coachlink.one.data.*
                 visualTransformation=PasswordVisualTransformation()
             )
             if(error.isNotEmpty())Text(error,color=MaterialTheme.colorScheme.error)
-            Button(onClick={submit},enabled=!busy,modifier=Modifier.fillMaxWidth().height(56.dp)) {
+            Button(onClick={submit()},enabled=!busy,modifier=Modifier.fillMaxWidth().height(56.dp)) {
                 if(busy) {
                     CircularProgressIndicator(modifier=Modifier.size(20.dp),strokeWidth=2.dp,
                         color=MaterialTheme.colorScheme.onPrimary)
