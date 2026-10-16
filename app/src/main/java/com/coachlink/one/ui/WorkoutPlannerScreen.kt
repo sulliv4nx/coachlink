@@ -96,7 +96,7 @@ fun WorkoutPlannerScreen(vm:TrackerViewModel, plans:List<WorkoutPlan>, blocks:Li
                 Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically){
                     Column(Modifier.weight(1f)) {
                         Text("• ${move.name}",fontWeight=FontWeight.Medium)
-                        Text("${move.sets} × ${move.reps} · ${fmt(move.loadKg,0)} kg · repos ${move.restSec}s",style=MaterialTheme.typography.bodySmall)
+                        Text("${move.sets} × ${move.reps} · ${fmt(move.loadKg,0)} kg · repos ${move.restSec}s${if(move.supersetGroup.isNotBlank())" · Superset "+move.supersetGroup else ""}",style=MaterialTheme.typography.bodySmall)
                     }
                     IconButton(onClick={vm.removeWorkoutMovement(move.id)}){Icon(Icons.Default.Close,"Retirer le mouvement")}
                 }
@@ -180,10 +180,26 @@ fun WorkoutPlannerScreen(vm:TrackerViewModel, plans:List<WorkoutPlan>, blocks:Li
     var reps by remember{mutableStateOf("10")}
     var kg by remember{mutableStateOf("0")}
     var rest by remember{mutableStateOf("90")}
+    var group by remember{mutableStateOf("")}
     var error by remember{mutableStateOf("")}
     AlertDialog(onDismissRequest=onClose,title={Text("Mouvement • ${block.title}")},text={
         Column(Modifier.heightIn(max=490.dp).verticalScroll(rememberScrollState()),verticalArrangement=Arrangement.spacedBy(8.dp)) {
             Field("Exercice / mouvement",name,{name=it})
+            if(name.length in 2..32) {
+                searchExercises(name,4).forEach { suggestion ->
+                    TextButton(onClick={name=suggestion.name},modifier=Modifier.fillMaxWidth()) {
+                        Text("↳ ${suggestion.name} · ${suggestion.group}")
+                    }
+                }
+            } else {
+                Text("Exemples : squat, traction, thruster, rower…",style=MaterialTheme.typography.bodySmall)
+            }
+            Text("Groupe superset (facultatif)",fontWeight=FontWeight.Bold)
+            Row(horizontalArrangement=Arrangement.spacedBy(5.dp)) {
+                listOf("" to "Aucun","A" to "A","B" to "B","C" to "C").forEach { (key,label) ->
+                    FilterChip(selected=group==key,onClick={group=key},label={Text(label)})
+                }
+            }
             Field("Séries prévues",sets,{sets=it},true)
             Field("Répétitions",reps,{reps=it},true)
             Field("Charge cible (kg)",kg,{kg=it},true)
@@ -193,7 +209,7 @@ fun WorkoutPlannerScreen(vm:TrackerViewModel, plans:List<WorkoutPlan>, blocks:Li
     },confirmButton={Button(onClick={
         val s=sets.toIntOrNull();val r=reps.toIntOrNull();val k=double(kg);val restSec=rest.toIntOrNull()
         if(s==null || r==null || k==null || restSec==null)error="Valeurs incorrectes"
-        else if(vm.addWorkoutMovement(block.id,position,name,s,r,k,restSec))onClose()
+        else if(vm.addWorkoutMovement(block.id,position,name,s,r,k,restSec,group))onClose()
     }){Text("Ajouter")}},dismissButton={TextButton(onClick=onClose){Text("Annuler")}})
 }
 
@@ -240,19 +256,7 @@ fun WorkoutPlannerScreen(vm:TrackerViewModel, plans:List<WorkoutPlan>, blocks:Li
             if(timer.overtime)Text("Temps prévu atteint · termine ou passe au bloc suivant.",color=MaterialTheme.colorScheme.error)
             moves.filter{it.blockId==currentBlock.id}.sortedBy{it.position}.forEach { step ->
                 HorizontalDivider(color=MaterialTheme.colorScheme.outlineVariant)
-                val logged=results.filter{it.runId==run.id && it.movementId==step.id}
-                val performed=logged.count{it.status=="DONE"}
-                Text(step.name,fontWeight=FontWeight.Bold)
-                Text("Prévu : ${step.sets} × ${step.reps} à ${fmt(step.loadKg,0)} kg · repos ${step.restSec}s",
-                    style=MaterialTheme.typography.bodySmall)
-                Text("Réalisé : $performed série(s)${if(logged.any{it.status=="SKIP"})" · passé" else ""}",color=MaterialTheme.colorScheme.primary)
-                logged.forEach{line->
-                    Text("${line.setNumber}. ${if(line.status=="SKIP")"passé" else "${line.reps} rep. · ${fmt(line.loadKg,0)} kg"}",style=MaterialTheme.typography.bodySmall)
-                }
-                Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-                    Button(onClick={addSetFor=step},enabled=running) {Text("+ Série")}
-                    OutlinedButton(onClick={skipFor=step},enabled=running){Text("Passer")}
-                }
+                QuickSetRecorder(vm,run,step,results,running,onSkip={skipFor=step})
             }
             if(run.restRemainingSec>0) {
                 val remaining=restSecondsLeft(run.restStartedAtMs,run.restRemainingSec,now)
