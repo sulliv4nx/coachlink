@@ -195,7 +195,7 @@ import kotlinx.coroutines.delay
                     Text("${x.durationMinutes} min • ${x.caloriesBurned} kcal • ${if(x.calorieMethod=="ESTIMATE") "Estimation" else "Saisie / montre"}",style=MaterialTheme.typography.bodySmall)
                     if(x.notes.isNotBlank()) Text(x.notes,style=MaterialTheme.typography.bodySmall)
                 }
-                IconButton(onClick=vm.removeSportSession(x.id)) { Icon(Icons.Default.DeleteOutline,"Supprimer") }
+                IconButton(onClick={vm.removeSportSession(x.id)}) { Icon(Icons.Default.DeleteOutline,"Supprimer") }
             }
         }
     }
