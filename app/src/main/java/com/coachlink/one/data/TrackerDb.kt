@@ -69,6 +69,30 @@ data class TrainingLog(
     val loadKg: Double
 )
 
+
+/** Measurable, independent sport goals. Multiple goals can share the same period. */
+@Entity(tableName="sport_goals")
+data class SportGoal(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val title: String,
+    val metric: String,
+    val period: String,
+    val target: Int,
+    val createdAt: String
+)
+
+/** One completed workout per session; calories never subtract from the food diary. */
+@Entity(tableName="sport_sessions", indices=[Index("date")])
+data class SportSession(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val date: String,
+    val activity: String,
+    val durationMinutes: Int,
+    val caloriesBurned: Int,
+    val calorieMethod: String = "MANUAL",
+    val notes: String = ""
+)
+
 @Entity(tableName="friend_goals")
 data class FriendGoal(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
@@ -95,18 +119,38 @@ data class FriendGoal(
     @Query("DELETE FROM exercises WHERE id=:id") suspend fun deleteExercise(id: Long)
     @Query("SELECT * FROM training_logs ORDER BY date DESC,id DESC") fun logs(): Flow<List<TrainingLog>>
     @Insert suspend fun addLog(x: TrainingLog)
+    @Query("SELECT * FROM sport_goals ORDER BY id DESC") fun sportGoals(): Flow<List<SportGoal>>
+    @Insert suspend fun addSportGoal(x: SportGoal)
+    @Query("DELETE FROM sport_goals WHERE id=:id") suspend fun deleteSportGoal(id: Long)
+    @Query("SELECT * FROM sport_sessions ORDER BY date DESC,id DESC") fun sportSessions(): Flow<List<SportSession>>
+    @Insert suspend fun addSportSession(x: SportSession)
+    @Query("DELETE FROM sport_sessions WHERE id=:id") suspend fun deleteSportSession(id: Long)
     @Query("SELECT * FROM friend_goals ORDER BY id DESC") fun friends(): Flow<List<FriendGoal>>
     @Insert suspend fun addFriendGoal(x: FriendGoal)
     @Query("DELETE FROM friend_goals WHERE id=:id") suspend fun deleteFriendGoal(id: Long)
 }
 
-@Database(entities=[Profile::class,Measurement::class,Food::class,Program::class,Exercise::class,TrainingLog::class,FriendGoal::class],version=1,exportSchema=false)
+@Database(entities=[Profile::class,Measurement::class,Food::class,Program::class,Exercise::class,TrainingLog::class,FriendGoal::class,SportGoal::class,SportSession::class],version=2,exportSchema=false)
 abstract class TrackerDb: RoomDatabase() {
     abstract fun dao(): TrackerDao
     companion object {
+        private val MIGRATION_1_2 = object : androidx.room.migration.Migration(1, 2) {
+            override fun migrate(db: androidx.sqlite.db.SupportSQLiteDatabase) {
+                db.execSQL("""CREATE TABLE IF NOT EXISTS sport_goals (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                    title TEXT NOT NULL, metric TEXT NOT NULL, period TEXT NOT NULL,
+                    target INTEGER NOT NULL, createdAt TEXT NOT NULL)""")
+                db.execSQL("""CREATE TABLE IF NOT EXISTS sport_sessions (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                    date TEXT NOT NULL, activity TEXT NOT NULL,
+                    durationMinutes INTEGER NOT NULL, caloriesBurned INTEGER NOT NULL,
+                    calorieMethod TEXT NOT NULL, notes TEXT NOT NULL)""")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_sport_sessions_date ON sport_sessions (date)")
+            }
+        }
         @Volatile private var db: TrackerDb? = null
         fun get(context: Context): TrackerDb = db ?: synchronized(this) {
-            db ?: Room.databaseBuilder(context.applicationContext,TrackerDb::class.java,"coachlink-one.db").build().also { db=it }
+            db ?: Room.databaseBuilder(context.applicationContext,TrackerDb::class.java,"coachlink-one.db").addMigrations(MIGRATION_1_2).build().also { db=it }
         }
     }
 }

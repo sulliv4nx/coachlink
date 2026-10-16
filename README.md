@@ -11,3 +11,11 @@ Fonctions V1 : accueil local par PIN à six chiffres, profil/objectif et décomp
 Les besoins énergétiques utilisent Mifflin–St Jeor et des facteurs d'activité déclaratifs, réservés aux adultes pour cette version. Ils constituent des estimations. L'IMC ne sépare pas muscle et masse grasse. Aucune recommandation médicale ni prescription sportive clinique.
 
 Build : `gradle :app:testDebugUnitTest :app:assembleDebug`. Workflow GitHub Actions `android-one-debug.yml` sur la branche indiquée. Package : `com.coachlink.one` — s'installe indépendamment de l'ancien CoachLink.
+
+## V1.1 — Nutrition & objectifs sportifs multiples
+- Recherche de produits emballés par nom via Open Food Facts (réseau requis), choix d'un produit puis recalcul automatique des kcal/macros dès modification des grammes. Les valeurs restent vérifiables et éditables. Les aliments déjà saisis sont réutilisables hors ligne.
+- Limitation conservatrice des appels au catalogue à un appel toutes les 7 secondes sur cet appareil.
+- Objectifs sportifs multiples, hebdomadaires ou mensuels, basés sur les séances enregistrées, les minutes et les kcal déclarées.
+- Après séance: saisie de la durée, des kcal relevées (montre/appareil) ou estimation facultative à partir du poids et de MET. Les estimations sont approximatives et ne sont pas automatiquement déduites des calories consommées.
+- Migration Room 1 vers 2: conserve les anciens repas, mesures, programmes, performances et amis.
+- Recherche Open Food Facts sous sa licence ODbL, attribution et conditions sur openfoodfacts.org. Pas d'identification de produits maison fiable à partir d'un seul nom.

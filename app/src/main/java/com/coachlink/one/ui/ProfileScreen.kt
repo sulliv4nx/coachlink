@@ -22,7 +22,7 @@ import java.time.LocalDate
 import kotlin.math.abs
 import kotlin.math.roundToInt
 
-@Composable fun ProfileScreen(vm:TrackerViewModel,p:Profile?,measurements:List<Measurement>,foods:List<Food>,logs:List<TrainingLog>,friends:List<FriendGoal>) {
+@Composable fun ProfileScreen(vm:TrackerViewModel,p:Profile?,measurements:List<Measurement>,foods:List<Food>,logs:List<TrainingLog>,friends:List<FriendGoal>,sportGoals:List<SportGoal>,sportSessions:List<SportSession>) {
     val profile=p?:Profile(age=0,sex="NA",heightCm=0.0,startWeightKg=0.0,goalWeightKg=0.0,goalDate="")
     var edit by remember {mutableStateOf(false)}
     var share by remember {mutableStateOf(false)}
@@ -78,6 +78,16 @@ import kotlin.math.roundToInt
         if(target!=null) LinearProgressIndicator(progress={(total.kcal/target).toFloat().coerceIn(0f,1f)},modifier=Modifier.fillMaxWidth())
         Text("Protéines ${fmt(total.protein,0)} g • Glucides ${fmt(total.carbs,0)} g • Lipides ${fmt(total.fat,0)} g")
         Text("${logs.count{it.date==today}} exercice(s) enregistré(s) aujourd'hui",style=MaterialTheme.typography.bodySmall)
+    }
+    Panel("SPORT • SUIVI DE LA SEMAINE") {
+        val start=LocalDate.now().with(java.time.DayOfWeek.MONDAY)
+        val thisWeek=sportSessions.filter { runCatching { val date=LocalDate.parse(it.date);
+            !date.isBefore(start) && !date.isAfter(LocalDate.now()) }.getOrDefault(false) }
+        Text("${thisWeek.size} séance(s) • ${thisWeek.sumOf{it.durationMinutes}} min • ${thisWeek.sumOf{it.caloriesBurned}} kcal dépensées (déclarées / estimées)",
+            style=MaterialTheme.typography.bodyLarge,fontWeight=FontWeight.Bold)
+        Text("Dépenses sportives séparées des apports alimentaires : la cible nutritionnelle ne change pas automatiquement.",
+            style=MaterialTheme.typography.bodySmall)
+        if(sportGoals.isNotEmpty()) Text("${sportGoals.size} objectif(s) sportifs suivis dans Sport")
     }
     Panel("BILAN VISUEL • 7 JOURS") {
         (6 downTo 0).forEach { daysAgo ->

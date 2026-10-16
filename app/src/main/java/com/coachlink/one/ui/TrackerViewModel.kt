@@ -18,6 +18,31 @@ class TrackerViewModel(app: Application): AndroidViewModel(app) {
     val exercises = dao.exercises()
     val logs = dao.logs()
     val friends = dao.friends()
+    val sportGoals = dao.sportGoals()
+    val sportSessions = dao.sportSessions()
+    private val _suggestions = MutableStateFlow<List<FoodSuggestion>>(emptyList())
+    val suggestions = _suggestions.asStateFlow()
+    private val _foodSearchBusy = MutableStateFlow(false)
+    val foodSearchBusy = _foodSearchBusy.asStateFlow()
+    private var lastFoodSearchAt = 0L
+    fun clearSuggestions() { _suggestions.value = emptyList() }
+    fun searchFoods(query: String) {
+        if (query.trim().length < 3 || _foodSearchBusy.value) return
+        // OFF limits full text search to 10 requests/min/IP. Conservative on-device throttle.
+        val now = android.os.SystemClock.elapsedRealtime()
+        if (now - lastFoodSearchAt < 7000L) {
+            _notice.value = "Attends quelques secondes avant une nouvelle recherche"
+            return
+        }
+        lastFoodSearchAt = now
+        viewModelScope.launch {
+            _foodSearchBusy.value = true
+            _suggestions.value = emptyList()
+            FoodCatalog.search(query).onSuccess { _suggestions.value = it }
+                .onFailure { _notice.value = it.message ?: "Recherche indisponible" }
+            _foodSearchBusy.value = false
+        }
+    }
     private val _notice = MutableStateFlow("")
     val notice = _notice.asStateFlow()
     fun clearNotice() { _notice.value = "" }
@@ -31,6 +56,10 @@ class TrackerViewModel(app: Application): AndroidViewModel(app) {
     fun removeMeasurement(id:Long) = run("Mesure supprimée") {dao.deleteMeasurement(id)}
     fun addFood(x:Food) = run("Repas enregistré") {dao.addFood(x)}
     fun removeFood(id:Long) = run("Aliment retiré") {dao.deleteFood(id)}
+    fun addSportGoal(x:SportGoal) = run("Objectif sportif enregistré") {dao.addSportGoal(x)}
+    fun removeSportGoal(id:Long) = run("Objectif retiré") {dao.deleteSportGoal(id)}
+    fun addSportSession(x:SportSession) = run("Séance et dépense enregistrées") {dao.addSportSession(x)}
+    fun removeSportSession(id:Long) = run("Séance retirée") {dao.deleteSportSession(id)}
     fun addProgram(title:String, day:String) = run("Programme créé") {dao.addProgram(Program(title=title,dayLabel=day))}
     fun removeProgram(id:Long) = run("Programme supprimé") {dao.deleteProgram(id)}
     fun addExercise(x:Exercise) = run("Exercice ajouté") {dao.addExercise(x)}
